@@ -15,28 +15,15 @@
 
 <body>
     <div id="cy"></div>
-    <div class="controlContainer">
-        <button id="button_center">Center</button>
+    <!-- <div class="controlContainer">
+        <input type="text" name="center" id="center_node" placeholder="Please enter the node you want to CENTER">
         <button id="button_fit">Fit</button>
-    </div>
-    <!-- <div class="shape_container">
-        <div id="button_circle">
-            <div class=></div>
-            Circle
-        </div>
-        <div id="button_triangle">Triangle</div>
-        <div id="button_rectangle">Rectangle</div>
-        <div id="button_octangon">Octagon</div>
     </div> -->
 </body>
 <script type="text/javascript">
-    var cy, nIntervId, eles, currentId = 0, currentDiamondId;
-    // var shapeIdList = {
-    //     currentDiamondId,
-    //     currentTriangleId,
-    //     currentRectangleId,
-    //     currentHexagonId
-    // }
+    var cy, nIntervId, eles, currentId = 0;
+    var shapeIDList = [0, 0, 0, 0];
+
     const WIDTH = window.innerWidth, HEIGHT = window.innerHeight;
     const COLOR_PALETTES = ["#d5f4e6", "#80ced6", "#fefbd8", "#618685"];
     const SHAPE_SET = ['diamond', 'triangle', 'rectangle', 'hexagon']
@@ -44,53 +31,44 @@
     var collection;
 
     function initExampleNode() {
-        createNewDiamondNode();
+        for (let i = 0; i < 4; i++) {
+            createNewShapeNode(i, 0, i * 100);
+        }
     }
 
-    function changeCurrentDiamond(diamond) {
-        diamond.style({
-            'background-color': COLOR_PALETTES[0],
-            label: 'node' + diamond.id(),
+    function changeCurrentShapeNode(shapeNode) {
+        let shapeID = shapeNode.data('shapeID');
+        log('shapeIDshapeIDshapeIDshapeID:', shapeID)
+        shapeNode.style({
+            'background-color': COLOR_PALETTES[shapeID],
+            label: 'node' + shapeNode.id(),
             "z-index": 2,
         });
     }
 
-    function createNewDiamondNode(postionX = 0, positionY = 0) {
+    function createNewShapeNode(shapeID, postionX = 0, positionY = 0) {
         let size = 50;
         cy.add({
             data: {
                 id: currentId,
-                groupID: 0
+                shapeID
             },
             position: {
-                x: size,
-                y: size,
+                x: postionX,
+                y: size + positionY,
             },
             style: {
                 "background-color": 'black',
-                shape: SHAPE_SET[0],
+                shape: SHAPE_SET[shapeID],
                 height: size,
                 width: size,
                 label: "Drag ME!",
             },
         });
-        let diamondNode = cy.getElementById(currentId);
-        currentDiamondId = currentId;
+        shapeIDList[shapeID] = currentId;
         currentId++;
     }
 
-    function initLeftButtons() {
-        let button_circle = document.getElementById('button_circle');
-        let button_triangle = document.getElementById('button_triangle');
-        let button_rectangle = document.getElementById('button_rectangle');
-        let button_octangon = document.getElementById('button_octangon');
-
-        button_circle.addEventListener('drag', () => {
-            log('circle dragged');
-        })
-
-
-    }
     function initCytoscape() {
         cy = cytoscape({
             container: document.getElementById('cy'), // container to render in
@@ -150,14 +128,14 @@
         cy.on('mouseout', 'node', function (evt) {
             let targetEle = cy.$("#" + evt.target.id());
             let eles = getGroupEles(targetEle);
-            let color = COLOR_PALETTES[targetEle.data('groupID')]
+            let color = COLOR_PALETTES[targetEle.data('shapeID')]
             setColorforEles(eles, color);
         });
     }
 
     function getGroupEles(targetEle) {
         return cy.nodes().filter((ele) => {
-            return ele.data('groupID') == targetEle.data('groupID');
+            return ele.data('shapeID') == targetEle.data('shapeID');
         });
     }
 
@@ -172,9 +150,9 @@
         })
     }
 
-    function handleCenter() {
-        log("clicked center")
-        cy.center(cy.$('#node0'));
+    function updateCenterNode(e) {
+        let nodeId = e.target.value;
+        cy.center(cy.$('#node' + nodeId));
     }
 
     function handleFit() {
@@ -189,21 +167,21 @@
         return Math.floor(Math.random() * 4);
     }
 
-    function createNodeInstance(id, weight, groupID, positionX, postionY, color = '', label = undefined) {
+    function createNodeInstance(id, weight, shapeID, positionX, postionY, color = '', label = undefined) {
         cy.add({
             data: {
                 id: 'node' + id,
                 weight,
-                groupID,
+                shapeID,
             },
             position: {
                 x: positionX,
                 y: postionY,
             },
             style: {
-                "background-color": color ? color : COLOR_PALETTES[groupID],
+                "background-color": color ? color : COLOR_PALETTES[shapeID],
                 "z-index": 2,
-                shape: SHAPE_SET[groupID],
+                shape: SHAPE_SET[shapeID],
                 height: weight,
                 width: weight,
                 label
@@ -220,8 +198,10 @@
         });
     }
     function addNewNode() {
-        let groupID = getRandomClass(), weight = 20 + Math.ceil(Math.random() * 4) * 5;
-        createNodeInstance(currentId, weight, groupID, Math.random() * WIDTH, Math.random() * HEIGHT);
+        let shapeID = getRandomClass();
+        // let weight = 20 + Math.ceil(Math.random() * 4) * 5;
+        let weight = 50;
+        createNodeInstance(currentId, weight, shapeID, Math.random() * WIDTH, Math.random() * HEIGHT);
         createEdgeInstance(currentId, 'node' + currentId, 'node' + Math.floor(Math.random() * currentId));
         currentId++;
     }
@@ -246,22 +226,27 @@
 
     function cyMouseupEvent() {
         cy.on('mouseup', (evt) => {
-            let diamond = cy.getElementById(currentDiamondId);
-            log('grabbed:', diamond.grabbed());
-            if (diamond.grabbed()) {
-                changeCurrentDiamond(diamond);
-                createNewDiamondNode();
-            }
+            log('=====shapeIDList:', shapeIDList);
+
+            shapeIDList.forEach((shapeID, index) => {
+                let shapeNode = cy.getElementById(shapeID);
+                if (shapeNode.grabbed()) {
+                    changeCurrentShapeNode(shapeNode);
+                    createNewShapeNode(index, 0, index * 100);
+                }
+            })
+
+
         })
     }
 
     function main() {
         initCytoscape();
-
-        // AddRandomNodeAndEdge(10);
+        AddRandomNodeAndEdge(10);
         initExampleNode();
-        document.getElementById("button_center").addEventListener("click", handleCenter);
-        document.getElementById("button_fit").addEventListener("click", handleFit);
+
+        // document.getElementById("center_node").addEventListener("change", updateCenterNode);
+        // document.getElementById("button_fit").addEventListener("click", handleFit);
         cyMousedownEvent();
         cyMouseupEvent();
     }

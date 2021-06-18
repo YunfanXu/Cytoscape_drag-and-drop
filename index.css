@@ -4,7 +4,7 @@ html, body {
 
 #cy {
     display: block;
-    padding-top: 100px;
+    /* padding-top: 100px; */
     height: 800px;
     width: 100%;
 }
@@ -22,14 +22,6 @@ html, body {
 
 }
 
-.shape_container div{
-    height: 40px;
-    width: 100%;
-    padding: 10px;
-    display: flex;
-    justify-content: center;
-    align-items:center;
-}
 .controlContainer {
     position: absolute;
     left: 0;
