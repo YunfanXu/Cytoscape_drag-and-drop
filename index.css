@@ -1,0 +1,56 @@
+html, body {
+    position: relative;
+}
+
+#cy {
+    display: block;
+    padding-top: 100px;
+    height: 800px;
+    width: 100%;
+}
+
+.shape_container{
+    position: absolute;
+    left: 0;
+    top: 100px;
+    width: 80px;
+    height: auto;
+    display: flex;
+    flex-direction: column;
+    justify-content: space-around;
+    align-items: center;
+
+}
+
+.shape_container div{
+    height: 40px;
+    width: 100%;
+    padding: 10px;
+    display: flex;
+    justify-content: center;
+    align-items:center;
+}
+.controlContainer {
+    position: absolute;
+    left: 0;
+    top: 0;
+    width: 100%;
+    height: auto;
+    display: flex;
+    flex-direction: row;
+    justify-content: space-around;
+    align-items: center;
+}
+
+.controlContainer button {
+    padding: 10px;
+    background-color: rbga(0, 0, 0, 0.2);
+    height: 40px;
+    width: 100px;
+    border-color: azure;
+    border-radius: 5px;
+}
+
+.controlContainer .color_red{
+    background-color: red;
+}

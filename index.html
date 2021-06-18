@@ -1,0 +1,273 @@
+<!doctype html>
+
+<html>
+
+<head>
+    <title>Tutorial 1: Getting Started</title>
+    <!-- <script src="cytoscape.js" /> -->
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/cytoscape/3.19.0/cytoscape.min.js"
+        integrity="sha512-TOWs340KHbJjY/a2SCtsUcXYBg7/xPX72NKpJ3VITogkHJTy2yMyoJE0pxJjumMGHCg46ud89KO5q1Toe3Aeaw=="
+        crossorigin="anonymous" referrerpolicy="no-referrer"></script>
+
+    <script src="https://cdn.jsdelivr.net/npm/interactjs@1.10.11/dist/interact.min.js"></script>
+    <link rel="stylesheet" href="index.css" />
+</head>
+
+<body>
+    <div id="cy"></div>
+    <div class="controlContainer">
+        <button id="button_center">Center</button>
+        <button id="button_fit">Fit</button>
+    </div>
+    <!-- <div class="shape_container">
+        <div id="button_circle">
+            <div class=></div>
+            Circle
+        </div>
+        <div id="button_triangle">Triangle</div>
+        <div id="button_rectangle">Rectangle</div>
+        <div id="button_octangon">Octagon</div>
+    </div> -->
+</body>
+<script type="text/javascript">
+    var cy, nIntervId, eles, currentId = 0, currentDiamondId;
+    // var shapeIdList = {
+    //     currentDiamondId,
+    //     currentTriangleId,
+    //     currentRectangleId,
+    //     currentHexagonId
+    // }
+    const WIDTH = window.innerWidth, HEIGHT = window.innerHeight;
+    const COLOR_PALETTES = ["#d5f4e6", "#80ced6", "#fefbd8", "#618685"];
+    const SHAPE_SET = ['diamond', 'triangle', 'rectangle', 'hexagon']
+    const { log } = console;
+    var collection;
+
+    function initExampleNode() {
+        createNewDiamondNode();
+    }
+
+    function changeCurrentDiamond(diamond) {
+        diamond.style({
+            'background-color': COLOR_PALETTES[0],
+            label: 'node' + diamond.id(),
+            "z-index": 2,
+        });
+    }
+
+    function createNewDiamondNode(postionX = 0, positionY = 0) {
+        let size = 50;
+        cy.add({
+            data: {
+                id: currentId,
+                groupID: 0
+            },
+            position: {
+                x: size,
+                y: size,
+            },
+            style: {
+                "background-color": 'black',
+                shape: SHAPE_SET[0],
+                height: size,
+                width: size,
+                label: "Drag ME!",
+            },
+        });
+        let diamondNode = cy.getElementById(currentId);
+        currentDiamondId = currentId;
+        currentId++;
+    }
+
+    function initLeftButtons() {
+        let button_circle = document.getElementById('button_circle');
+        let button_triangle = document.getElementById('button_triangle');
+        let button_rectangle = document.getElementById('button_rectangle');
+        let button_octangon = document.getElementById('button_octangon');
+
+        button_circle.addEventListener('drag', () => {
+            log('circle dragged');
+        })
+
+
+    }
+    function initCytoscape() {
+        cy = cytoscape({
+            container: document.getElementById('cy'), // container to render in
+            elements: [],
+
+            style: [ // the stylesheet for the graph
+                {
+                    selector: 'node',
+                    style: {
+                        label: 'data(id)'
+                    }
+                },
+
+                {
+                    selector: 'edge',
+                    style: {
+                        'width': 3,
+                        'line-color': '#ccc',
+                        'target-arrow-color': '#ccc',
+                        'target-arrow-shape': 'triangle',
+                        'curve-style': 'bezier'
+                    }
+                }
+            ],
+
+            layout: {
+                name: 'grid',
+                rows: 1
+            },
+
+            pan: {
+                x: 100,
+                y: 0
+            },
+            userPanningEnabled: false,
+        });
+
+        ele = cytoscape()
+        collection = cy.collection();
+        cy.nodes().on('click', function (e) {
+            var clickedNode = e.target;
+            collection = collection.union(clickedNode);
+        });
+
+        // doShowSameGroupEles();
+
+    }
+
+    function doShowSameGroupEles() {
+        cy.on('mouseover', 'node', function (evt) {
+            let targetEle = cy.$("#" + evt.target.id());
+
+            let eles = getGroupEles(targetEle);
+            setColorforEles(eles, '#ff8c00');
+        });
+
+        cy.on('mouseout', 'node', function (evt) {
+            let targetEle = cy.$("#" + evt.target.id());
+            let eles = getGroupEles(targetEle);
+            let color = COLOR_PALETTES[targetEle.data('groupID')]
+            setColorforEles(eles, color);
+        });
+    }
+
+    function getGroupEles(targetEle) {
+        return cy.nodes().filter((ele) => {
+            return ele.data('groupID') == targetEle.data('groupID');
+        });
+    }
+
+    function setColorforEles(eles, color) {
+        eles.forEach((ele, i, eles) => {
+            ele.animate({
+                style: {
+                    backgroundColor: color
+                },
+                duration: 500
+            });
+        })
+    }
+
+    function handleCenter() {
+        log("clicked center")
+        cy.center(cy.$('#node0'));
+    }
+
+    function handleFit() {
+        cy.fit();
+    }
+
+    function stopTextColor() {
+        clearInterval(nIntervId);
+    }
+
+    function getRandomClass() {
+        return Math.floor(Math.random() * 4);
+    }
+
+    function createNodeInstance(id, weight, groupID, positionX, postionY, color = '', label = undefined) {
+        cy.add({
+            data: {
+                id: 'node' + id,
+                weight,
+                groupID,
+            },
+            position: {
+                x: positionX,
+                y: postionY,
+            },
+            style: {
+                "background-color": color ? color : COLOR_PALETTES[groupID],
+                "z-index": 2,
+                shape: SHAPE_SET[groupID],
+                height: weight,
+                width: weight,
+                label
+            },
+        });
+    }
+    function createEdgeInstance(id, source, target) {
+        cy.add({
+            data: {
+                id: 'edge' + id,
+                source: source,
+                target: target
+            },
+        });
+    }
+    function addNewNode() {
+        let groupID = getRandomClass(), weight = 20 + Math.ceil(Math.random() * 4) * 5;
+        createNodeInstance(currentId, weight, groupID, Math.random() * WIDTH, Math.random() * HEIGHT);
+        createEdgeInstance(currentId, 'node' + currentId, 'node' + Math.floor(Math.random() * currentId));
+        currentId++;
+    }
+
+    function AddRandomNodeAndEdge(num) {
+        if (typeof num != "number" || num <= 0) return;
+        let i = 0;
+        while (i < num) {
+            addNewNode();
+            i++;
+        }
+        cy.layout({ name: 'circle', padding: 50, }).run();
+
+    }
+
+    function cyMousedownEvent() {
+        cy.on('mousedown', (evt) => {
+
+
+        })
+    }
+
+    function cyMouseupEvent() {
+        cy.on('mouseup', (evt) => {
+            let diamond = cy.getElementById(currentDiamondId);
+            log('grabbed:', diamond.grabbed());
+            if (diamond.grabbed()) {
+                changeCurrentDiamond(diamond);
+                createNewDiamondNode();
+            }
+        })
+    }
+
+    function main() {
+        initCytoscape();
+
+        // AddRandomNodeAndEdge(10);
+        initExampleNode();
+        document.getElementById("button_center").addEventListener("click", handleCenter);
+        document.getElementById("button_fit").addEventListener("click", handleFit);
+        cyMousedownEvent();
+        cyMouseupEvent();
+    }
+
+
+    main();
+</script>
+
+</html>
