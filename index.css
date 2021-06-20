@@ -13,9 +13,9 @@ html, body {
     position: absolute;
     color: black;
     z-index: 10;
-    font-size: 15px;
+    font-size: 12px;
     font-weight: bold;
-    width: 3em;
+    width: 60px;
     height: 30px;
     background-color: transparent;
     border-color: transparent;

@@ -62,7 +62,8 @@
             data: {
                 id: 'node' + currentId,
                 shapeID,
-                weight: NODESIZE
+                weight: NODESIZE,
+                isSample: true
             },
             position: {
                 x: postionX,
@@ -329,6 +330,7 @@
 
     function cyMousedownEvent() {
         cy.on('mousedown', (evt) => {
+            hiddenNodeInput();
         })
     }
 
@@ -362,6 +364,11 @@
             noEdgeEventsInDraw: true,
             snap: true
         });
+        cy.on("ehshow", (event, sourceNode) => {
+            if (sourceNode.data("isSample")) {
+                log("Fired");
+            }
+        })
     }
 
     function main() {
