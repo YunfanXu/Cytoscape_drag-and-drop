@@ -8,6 +8,9 @@
     <script src="https://cdnjs.cloudflare.com/ajax/libs/cytoscape/3.19.0/cytoscape.min.js"
         integrity="sha512-TOWs340KHbJjY/a2SCtsUcXYBg7/xPX72NKpJ3VITogkHJTy2yMyoJE0pxJjumMGHCg46ud89KO5q1Toe3Aeaw=="
         crossorigin="anonymous" referrerpolicy="no-referrer"></script>
+
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/lodash.js/4.17.10/lodash.js"></script>
+    <script src="cytoscape-edgehandles.js"></script>
     <link rel="stylesheet" href="index.css" />
 </head>
 
@@ -20,7 +23,7 @@
     </div> -->
 </body>
 <script type="text/javascript">
-    var cy, nIntervId, eles, currentId = 0;
+    var cy, eh, nIntervId, currentId = 0;
     var shapeIDList = [0, 0, 0, 0];
     const WIDTH = window.innerWidth, HEIGHT = window.innerHeight;
     const COLOR_PALETTES = ["#d5f4e6", "#80ced6", "#fefbd8", "#618685"];
@@ -35,11 +38,19 @@
         }
     }
 
+    function updateNodeContent(shapeNode) {
+        shapeNode.style({
+            content: (e) => {
+                return `ID: ${e.data("id")}\n Weight: ${e.data("weight")}`
+            },
+        });
+    }
+
     function changeCurrentShapeNode(shapeNode) {
         let shapeID = shapeNode.data('shapeID');
         shapeNode.style({
             'background-color': COLOR_PALETTES[shapeID],
-            label: (e) => {
+            content: (e) => {
                 return `ID: ${e.data("id")}\n Weight: ${e.data("weight")}`
             },
             "z-index": 2,
@@ -62,7 +73,7 @@
                 shape: SHAPE_SET[shapeID],
                 height: NODESIZE,
                 width: NODESIZE,
-                label: "Drag ME!",
+                content: "Drag ME!",
             },
         });
         shapeIDList[shapeID] = currentId;
@@ -76,17 +87,18 @@
 
             style: [ // the stylesheet for the graph
                 {
-                    selector: 'node',
+                    selector: 'node[id]',
                     style: {
                         'font-size': '12px',
                         'text-wrap': 'wrap',
                         'line-height': 1.5,
                         /*
-                            Using template strings for multiple data values in label text
+                            Using template strings for multiple data values in content text
                         */
-                        label: (e) => {
-                            return `ID: ${e.data("id")}\n Weight: ${e.data("weight")}`
-                        }
+
+                        // content: (e) => {
+                        //     return `ID: ${e.data("id")}\n Weight: ${e.data("weight")}`
+                        // }
                     }
                 },
 
@@ -98,6 +110,60 @@
                         'target-arrow-color': '#ccc',
                         'target-arrow-shape': 'triangle',
                         'curve-style': 'bezier'
+                    }
+                },
+                // some style for the extension
+
+                {
+                    selector: '.eh-handle',
+                    style: {
+                        'background-color': 'red',
+                        'width': 15,
+                        'height': 15,
+                        'shape': 'ellipse',
+                        'overlay-opacity': 0,
+                        'border-width': 15, // makes the handle easier to hit
+                        'border-opacity': 0
+                    }
+                },
+
+                {
+                    selector: '.eh-hover',
+                    style: {
+                        'background-color': 'red'
+                    }
+                },
+
+                {
+                    selector: '.eh-source',
+                    style: {
+                        'border-width': 2,
+                        'border-color': 'red'
+                    }
+                },
+
+                {
+                    selector: '.eh-target',
+                    style: {
+                        'border-width': 2,
+                        'border-color': 'red'
+                    }
+                },
+
+                {
+                    selector: '.eh-preview, .eh-ghost-edge',
+                    style: {
+                        'background-color': 'red',
+                        'line-color': 'red',
+                        'target-arrow-color': 'red',
+                        'source-arrow-color': 'red'
+                    }
+                },
+
+                {
+                    selector: '.eh-ghost-edge.eh-preview-active',
+                    style: {
+                        'opacity': 0
                     }
                 }
             ],
@@ -169,13 +235,12 @@
 
     function changeNodeWeight(e) {
         let weight = e.target.value;
-
-        
         currNode.data('weight', weight);
+        updateNodeContent(currNode);
         currNode.style({
             height: weight,
             width: weight
-        })
+        });
     }
 
     function stopTextColor() {
@@ -186,7 +251,7 @@
         return Math.floor(Math.random() * 4);
     }
 
-    function changeLabelContent(shapeNode, { x, y }) {
+    function changecontentContent(shapeNode, { x, y }) {
         currNode = shapeNode;
         log("currNode", currNode.id())
         displayNodeInput(x, y);
@@ -197,7 +262,7 @@
         let nodeInput = document.getElementById("nodeInput");
         nodeInput.value = "";
         nodeInput.type = "number";
-        nodeInput.min = "0";
+        nodeInput.min = currNode.data('weight')
         nodeInput.style.left = (positionX - NODESIZE / 2) + 'px';
         nodeInput.style.top = (positionY - NODESIZE / 3) + 'px';
     }
@@ -207,8 +272,9 @@
         nodeInput.type = "hidden";
     }
 
-    function createNodeInstance(id, weight, shapeID, positionX, positionY, color = '', label = undefined) {
+    function createNodeInstance(id, weight, shapeID, positionX, positionY, color = '', content = undefined) {
         cy.add({
+            group: 'nodes',
             data: {
                 id: 'node' + id,
                 weight,
@@ -224,9 +290,13 @@
                 shape: SHAPE_SET[shapeID],
                 height: weight,
                 width: weight,
+                content: (e) => {
+                    return `ID: ${e.data("id")}\n Weight: ${e.data("weight")}`
+                },
             },
         });
     }
+
     function createEdgeInstance(id, source, target) {
         cy.add({
             data: {
@@ -236,6 +306,7 @@
             },
         });
     }
+
     function addNewNode() {
         let shapeID = getRandomClass();
         let weight = 20 + Math.ceil(Math.random() * 4) * 5;
@@ -280,13 +351,23 @@
             let node = evt.target;
             const { x, y } = node.renderedPosition();
             if (node.selected()) {
-                changeLabelContent(node, { x, y });
+                changecontentContent(node, { x, y });
             }
+        });
+    }
+
+    function initEdgeHandles() {
+        var eh = cy.edgehandles({
+            handleNodes: 'node',
+            noEdgeEventsInDraw: true,
+            snap: true
         });
     }
 
     function main() {
         initCytoscape();
+        initEdgeHandles();
+
         AddRandomNodeAndEdge(10);
         initExampleNode();
 
