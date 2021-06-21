@@ -15,7 +15,16 @@
 </head>
 
 <body>
-    <input id="nodeInput" type="hidden" step="5" placeholder="Weight:">
+
+    <input id="nodeInput" type="hidden" step="5" placeholder="Size:" max="100">
+    <div id="size_scalar">
+        <div>The maximum size of the node is 100</div>
+        <div class="number_container">
+            <div>0</div>
+            <div>100</div>
+        </div>
+        <div class="gradient_color"></div>
+    </div>
     <div id="cy"></div>
     <!-- <div class="controlContainer">
         <input type="text" name="center" id="center_node" placeholder="Please enter the node you want to CENTER">
@@ -29,6 +38,7 @@
     const COLOR_PALETTES = ["#d5f4e6", "#80ced6", "#fefbd8", "#618685"];
     const SHAPE_SET = ['diamond', 'triangle', 'rectangle', 'hexagon'];
     const NODESIZE = 50;
+    const COLOR_RANGE = [[210, 251, 212], [18, 63, 90]];
     const { log } = console;
     var collection, currNode;
 
@@ -41,17 +51,24 @@
     function updateNodeContent(shapeNode) {
         shapeNode.style({
             content: (e) => {
-                return `ID: ${e.data("id")}\n Weight: ${e.data("weight")}`
+                return `ID: ${e.data("id")}\n Size: ${e.data("size")}`
             },
         });
     }
 
+    function getColorBySize(size, color1 = COLOR_RANGE[0], color2 = COLOR_RANGE[1]) {
+        var w1 = 1 - (size / 100.00);
+        var w2 = size / 100.00;
+        var rgb = `rgb(${Math.round(color1[0] * w1 + color2[0] * w2)},${Math.round(color1[1] * w1 + color2[1] * w2)},${Math.round(color1[2] * w1 + color2[2] * w2)})`;
+        return rgb;
+
+    }
     function changeCurrentShapeNode(shapeNode) {
         let shapeID = shapeNode.data('shapeID');
         shapeNode.style({
-            'background-color': COLOR_PALETTES[shapeID],
+            'background-color': getColorBySize(shapeNode.data('size')),
             content: (e) => {
-                return `ID: ${e.data("id")}\n Weight: ${e.data("weight")}`
+                return `ID: ${e.data("id")}\n Size: ${e.data("size")}`
             },
             "z-index": 2,
         });
@@ -62,7 +79,7 @@
             data: {
                 id: 'node' + currentId,
                 shapeID,
-                weight: NODESIZE,
+                size: NODESIZE,
                 isSample: true
             },
             position: {
@@ -98,7 +115,7 @@
                         */
 
                         // content: (e) => {
-                        //     return `ID: ${e.data("id")}\n Weight: ${e.data("weight")}`
+                        //     return `ID: ${e.data("id")}\n Size: ${e.data("size")}`
                         // }
                     }
                 },
@@ -203,7 +220,7 @@
         cy.on('mouseout', 'node', function (evt) {
             let targetEle = cy.$("#" + evt.target.id());
             let eles = getGroupEles(targetEle);
-            let color = COLOR_PALETTES[targetEle.data('shapeID')]
+            let color = getColorBySize(targetEle.data('size'))
             setColorforEles(eles, color);
         });
     }
@@ -234,13 +251,15 @@
         cy.fit();
     }
 
-    function changeNodeWeight(e) {
-        let weight = e.target.value;
-        currNode.data('weight', weight);
+    function changeNodeSize(e) {
+        let size = e.target.value;
+        if (size > 100) size = 100;
+        currNode.data('size', size);
         updateNodeContent(currNode);
         currNode.style({
-            height: weight,
-            width: weight
+            height: size,
+            width: size,
+            backgroundColor: getColorBySize(size)
         });
     }
 
@@ -263,9 +282,9 @@
         let nodeInput = document.getElementById("nodeInput");
         nodeInput.value = "";
         nodeInput.type = "number";
-        nodeInput.min = currNode.data('weight')
+        nodeInput.min = currNode.data('size')
         nodeInput.style.left = (positionX - NODESIZE / 2) + 'px';
-        nodeInput.style.top = (positionY - NODESIZE / 3) + 'px';
+        nodeInput.style.top = (100 + positionY - NODESIZE / 3) + 'px';
     }
 
     function hiddenNodeInput() {
@@ -273,26 +292,27 @@
         nodeInput.type = "hidden";
     }
 
-    function createNodeInstance(id, weight, shapeID, positionX, positionY, color = '', content = undefined) {
+    function createNodeInstance(id, size, shapeID, positionX, positionY, color = '', content = undefined) {
         cy.add({
             group: 'nodes',
             data: {
                 id: 'node' + id,
-                weight,
+                size,
                 shapeID,
             },
             position: {
                 x: positionX,
                 y: positionY,
             },
+
             style: {
-                "background-color": color ? color : COLOR_PALETTES[shapeID],
+                "background-color": color ? color : getColorBySize(size),
                 "z-index": 2,
                 shape: SHAPE_SET[shapeID],
-                height: weight,
-                width: weight,
+                height: size,
+                width: size,
                 content: (e) => {
-                    return `ID: ${e.data("id")}\n Weight: ${e.data("weight")}`
+                    return `ID: ${e.data("id")}\n Size: ${e.data("size")}`
                 },
             },
         });
@@ -310,9 +330,9 @@
 
     function addNewNode() {
         let shapeID = getRandomClass();
-        let weight = 20 + Math.ceil(Math.random() * 4) * 5;
-        // let weight = 50;
-        createNodeInstance(currentId, weight, shapeID, Math.random() * WIDTH, Math.random() * HEIGHT);
+        let size = 20 + Math.ceil(Math.random() * 4) * 10;
+        // let size = 50;
+        createNodeInstance(currentId, size, shapeID, Math.random() * WIDTH, Math.random() * HEIGHT);
         createEdgeInstance(currentId, 'node' + currentId, 'node' + Math.floor(Math.random() * currentId));
         currentId++;
     }
@@ -380,11 +400,19 @@
 
         // document.getElementById("center_node").addEventListener("change", updateCenterNode);
         // document.getElementById("button_fit").addEventListener("click", handleFit);
-        document.getElementById("nodeInput").addEventListener("change", changeNodeWeight);
+        document.getElementById("nodeInput").addEventListener("change", changeNodeSize);
+        let linearGradient = 'linear-gradient( to right, rgb(' + COLOR_RANGE[0].join() + "), rgb(" + COLOR_RANGE[1].join() + ") 100%)";
+        log(linearGradient);
+        document.getElementsByClassName("gradient_color")[0].style.background = linearGradient;
         cyMousedownEvent();
         cyMouseupEvent();
         cyMouseDoubleClick();
         cy.fit();
+
+        log(getColorBySize(0));
+        log(getColorBySize(50));
+        log(getColorBySize(100));
+
     }
 
 
