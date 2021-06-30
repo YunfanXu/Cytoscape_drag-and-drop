@@ -11,40 +11,94 @@
 
     <script src="https://cdnjs.cloudflare.com/ajax/libs/lodash.js/4.17.10/lodash.js"></script>
     <script src="cytoscape-edgehandles.js"></script>
+    <script src="https://unpkg.com/dagre@0.7.4/dist/dagre.js"></script>
+    <script src="cytoscape-dagre.js"></script>
+    <script src="https://ajax.googleapis.com/ajax/libs/jquery/2.1.3/jquery.min.js"></script>
     <link rel="stylesheet" href="index.css" />
 </head>
 
 <body>
 
-    <input id="nodeInput" type="hidden" step="5" placeholder="Size:" max="100">
-    <div id="size_scalar">
+    <div class="mainContainer">
+        <!-- <div class="controlContainer">
+        <input type="text" name="center" id="center_node" placeholder="Please enter the node you want to CENTER">
+        <button id="button_fit">Fit</button>
+    </div> -->
+        <div id="cy"></div>
+        <div class="attributesContainer">
+            <div class="secondContainer riskContainer">
+                <h1>System Risk</h1>
+                <div class="linearBorder"></div>
+            </div>
+            <div class="secondContainer infoContainer">
+                <h1 id="node_id">indicator</h1>
+                <div class="nodeInfoContainer">
+                    <div class="nodeRisk">
+                        <span>Risk <br /> (Known)</span>
+                        <span id="valueRisk">1</span>
+                    </div>
+                    <div class="nodeSensitivityKnow">
+                        <span>Sensitivity <br /> (Known)</span>
+                        <span id="valueKnownSensitivity">0.5555</span>
+                    </div>
+                    <div class="nodeSensitivityUnknow">
+                        <span>Sensitivity <br /> (Unknown)</span>
+                        <span id="valueUnkownSensitivity">1</span>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <dialog id="nodeDialog">
+            <form method="dialog">
+                <p><label>Name: <input type="text" id="node_name"> </label></p>
+                <p><label>Risk: <input type="number" id="node_risk" step="0.001" max="1"> </label></p>
+
+                <p><label>Type:
+                        <select id="node_type">
+                            <option>component</option>
+                            <option>supplier</option>
+                        </select>
+                    </label>
+                </p>
+
+                <menu>
+                    <button value="cancel">Cancel</button>
+                    <button id="confirmBtn" value="default">Confirm</button>
+                </menu>
+            </form>
+        </dialog>
+    </div>
+
+    <!-- <div id="size_scalar">
         <div>The maximum size of the node is 100</div>
         <div class="number_container">
             <div>0</div>
             <div>100</div>
         </div>
         <div class="gradient_color"></div>
-    </div>
-    <div id="cy"></div>
-    <!-- <div class="controlContainer">
-        <input type="text" name="center" id="center_node" placeholder="Please enter the node you want to CENTER">
-        <button id="button_fit">Fit</button>
     </div> -->
+
+
+
 </body>
 <script type="text/javascript">
     var cy, eh, nIntervId, currentId = 0;
     var shapeIDList = [0, 0, 0, 0];
     const WIDTH = window.innerWidth, HEIGHT = window.innerHeight;
-    const COLOR_PALETTES = ["#d5f4e6", "#80ced6", "#fefbd8", "#618685"];
-    const SHAPE_SET = ['diamond', 'triangle', 'rectangle', 'hexagon'];
-    const NODESIZE = 50;
+    const COLOR_PALETTES = ["yellow", "gray", "gray", "gray"];
+    const SHAPE_SET = ['star', 'ellipse', 'triangle', 'rectangle'];
+    const NODE_SIZE = 40;
     const COLOR_RANGE = [[210, 251, 212], [18, 63, 90]];
+    const NODE_MAP = new Map();
+    const EDGE_MAP = new Map();
     const { log } = console;
     var collection, currNode;
+    var node_id, valueRisk, valueKnownSensitivity, valueUnkownSensitivity;
 
     function initExampleNode() {
-        for (let i = 0; i < 4; i++) {
-            createNewShapeNode(i, NODESIZE / 2, i * 100);
+        for (let i = 1; i < 4; i++) {
+            createNewShapeNode(i, -100, i * 100);
         }
     }
 
@@ -66,9 +120,9 @@
     function changeCurrentShapeNode(shapeNode) {
         let shapeID = shapeNode.data('shapeID');
         shapeNode.style({
-            'background-color': getColorBySize(shapeNode.data('size')),
+            "background-color": "gray",
             content: (e) => {
-                return `ID: ${e.data("id")}\n Size: ${e.data("size")}`
+                return `Name: ${e.data("id")}\n `
             },
             "z-index": 2,
         });
@@ -79,18 +133,18 @@
             data: {
                 id: 'node' + currentId,
                 shapeID,
-                size: NODESIZE,
+                size: NODE_SIZE,
                 isSample: true
             },
             position: {
                 x: postionX,
-                y: NODESIZE + positionY,
+                y: NODE_SIZE + positionY,
             },
             style: {
                 "background-color": 'black',
                 shape: SHAPE_SET[shapeID],
-                height: NODESIZE,
-                width: NODESIZE,
+                height: NODE_SIZE,
+                width: NODE_SIZE,
                 content: "Drag ME!",
             },
         });
@@ -98,11 +152,100 @@
         currentId++;
     }
 
+    function getNodeType(value) {
+        log("-----------",value);
+        switch (value.tags[0]) {
+            case "indicator":
+                return 0;
+            case "component":
+                return value?.logic?.component === "and" ? 2 : 1;
+            case "supplier":
+                return 3;
+
+        }
+    }
+
+    function nodeRebuild({ system_graph, data }) {
+        for (let [key, value] of Object.entries(system_graph.nodes)) {
+            let nodeData = {}, node = {
+                group: 'nodes',
+            };
+            nodeData.id = key;
+            nodeData.name = key;
+            nodeData.tags = value.tags;
+            nodeData.typeID = getNodeType(value);
+            nodeData.logic = value?.logic;
+            nodeData.risk = data?.nodes[key]?.risk;
+            nodeData.attributes = data?.nodes[key]?.attributes;
+
+            node.data = nodeData;
+            node.style = {
+                "background-color": COLOR_PALETTES[nodeData.typeID],
+                "z-index": 2,
+                shape: SHAPE_SET[nodeData.typeID],
+                height: NODE_SIZE,
+                width: NODE_SIZE,
+                content: (e) => {
+                    return e.data("name");
+                },
+            }
+            NODE_MAP.set(key, node);
+            cy.add(node)
+        }
+    }
+
+    function edgeRebuild({ system_graph, data }) {
+        for (let { src, dst } of system_graph.edges) {
+            let edgeData = {}, edge = {
+                group: 'edges',
+            };
+            edgeData.id = Math.random(10000);
+            edgeData.source = src;
+            edgeData.target = dst;
+            edge.data = edgeData;
+            edge.style = {
+                "line-color": "grey",
+                "line-style": "solid"
+            };
+            cy.add(edge);
+        }
+
+
+        for (let { src, dst, risk, cost } of data.edges) {
+            let edgeData = {}, edge = {
+                group: 'edges',
+            };
+            edgeData.source = src;
+            edgeData.target = dst;
+            edgeData.risk = risk;
+            edgeData.cost = cost;
+            edge.data = edgeData;
+            edge.style = {
+                "arrow-scale": 4,
+                "line-color": "grey",
+                "line-style": "dashed"
+            };
+            cy.add(edge);
+        }
+    }
+
+    function dataRebuild(json) {
+        nodeRebuild(json);
+        edgeRebuild(json);
+        cy.layout({ name: 'dagre', rankDir: 'BT', ranker: 'tight-tree', padding: 100 }).run();
+
+
+    }
+    function loadJSONData(file) {
+        $.getJSON(file, function (json) {
+            dataRebuild(json);
+        });
+    }
+
     function initCytoscape() {
         cy = cytoscape({
             container: document.getElementById('cy'), // container to render in
             elements: [],
-
             style: [ // the stylesheet for the graph
                 {
                     selector: 'node[id]',
@@ -113,10 +256,6 @@
                         /*
                             Using template strings for multiple data values in content text
                         */
-
-                        // content: (e) => {
-                        //     return `ID: ${e.data("id")}\n Size: ${e.data("size")}`
-                        // }
                     }
                 },
 
@@ -185,19 +324,14 @@
                     }
                 }
             ],
-
-            layout: {
-                name: 'grid',
-                rows: 1
-            },
-
             pan: {
                 x: 100,
                 y: 0
             },
-            userPanningEnabled: false,
         });
 
+
+        loadJSONData("./case_study_1_choices-3.json");
         ele = cytoscape()
         collection = cy.collection();
         cy.nodes().on('click', function (e) {
@@ -271,25 +405,50 @@
         return Math.floor(Math.random() * 4);
     }
 
-    function changecontentContent(shapeNode, { x, y }) {
+    function showDialog(shapeNode, { x, y }) {
         currNode = shapeNode;
         log("currNode", currNode.id())
-        displayNodeInput(x, y);
+        let nodeDialog = document.getElementById("nodeDialog");
+        let nodeName = document.getElementById("node_name");
+        let nodeRisk = document.getElementById("node_risk");
+        let nodeType = document.getElementById("node_type");
+
+        let confirmBtn = document.getElementById('confirmBtn');
+        if (typeof nodeDialog.showModal === "function") {
+            nodeName.value = shapeNode.data("name");
+            nodeRisk.value = shapeNode.data("risk");
+            nodeDialog.showModal();
+        } else {
+            alert("The <dialog> API is not supported by this browser");
+        }
+
+        confirmBtn.addEventListener('click', () => {
+            let data = {
+                id: nodeName.value,
+                name: nodeName.value,
+                tags: [nodeType.value],
+                risk: nodeRisk.value
+            }
+            data.typeID = getNodeType(data);
+            shapeNode.data(data);
+            shapeNode.style("content", nodeName.value);
+            log("data.typeID",data.typeID);
+            shapeNode.style("shape", SHAPE_SET[data.typeID]);
+        });
 
     };
 
     function displayNodeInput(positionX, positionY) {
-        let nodeInput = document.getElementById("nodeInput");
-        nodeInput.value = "";
-        nodeInput.type = "number";
-        nodeInput.min = currNode.data('size')
-        nodeInput.style.left = (positionX - NODESIZE / 2) + 'px';
-        nodeInput.style.top = (100 + positionY - NODESIZE / 3) + 'px';
+        // nodeDialog.value = "";
+        // nodeDialog.type = "number";
+        // nodeDialog.min = currNode.data('size')
+        // nodeDialog.style.left = (positionX - NODE_SIZE / 2) + 'px';
+        // nodeDialog.style.top = (100 + positionY - NODE_SIZE / 3) + 'px';
     }
 
     function hiddenNodeInput() {
-        let nodeInput = document.getElementById("nodeInput");
-        nodeInput.type = "hidden";
+        let nodeDialog = document.getElementById("nodeDialog");
+        nodeDialog.type = "hidden";
     }
 
     function createNodeInstance(id, size, shapeID, positionX, positionY, color = '', content = undefined) {
@@ -351,16 +510,23 @@
     function cyMousedownEvent() {
         cy.on('mousedown', (evt) => {
             hiddenNodeInput();
+            cy.nodes().forEach((ele) => {
+                if (ele.active()) {
+                    log(ele.data('name'))
+                    changeNodeInfo(ele.data('name'), ele.data('risk'), ele.data('risk'), ele.data('risk'))
+                }
+            })
         })
     }
 
     function cyMouseupEvent() {
         cy.on('mouseup', (evt) => {
             shapeIDList.forEach((shapeID, index) => {
+                if (index === 0) return;
                 let shapeNode = cy.getElementById('node' + shapeID);
                 if (shapeNode.grabbed()) {
                     changeCurrentShapeNode(shapeNode);
-                    createNewShapeNode(index, NODESIZE / 2, index * 100);
+                    createNewShapeNode(index, -100, index * 100);
                 }
             })
 
@@ -373,13 +539,16 @@
             let node = evt.target;
             const { x, y } = node.renderedPosition();
             if (node.selected()) {
-                changecontentContent(node, { x, y });
+                showDialog(node, { x, y });
             }
         });
+
     }
+
 
     function initEdgeHandles() {
         var eh = cy.edgehandles({
+            hoverDelay: 0,
             handleNodes: 'node',
             noEdgeEventsInDraw: true,
             snap: true
@@ -391,28 +560,36 @@
         })
     }
 
+    function initInfoItems() {
+        node_id = document.getElementById("node_id");
+        valueRisk = document.getElementById("valueRisk");
+        valueKnownSensitivity = document.getElementById("valueKnownSensitivity");
+        valueUnkownSensitivity = document.getElementById("valueUnkownSensitivity");
+
+    }
+
+    function changeNodeInfo(name = "", risk = 0, KnownSensitivity = 0, UnkownSensitivity = 0) {
+        node_id.innerHTML = name;
+        valueRisk.innerHTML = risk;
+        valueKnownSensitivity.innerHTML = KnownSensitivity;
+        valueUnkownSensitivity.innerHTML = UnkownSensitivity;
+    }
+
     function main() {
         initCytoscape();
         initEdgeHandles();
-
-        AddRandomNodeAndEdge(10);
-        initExampleNode();
-
+        initInfoItems();
+        // AddRandomNodeAndEdge(10);
+        window.setTimeout(initExampleNode, 50);
         // document.getElementById("center_node").addEventListener("change", updateCenterNode);
         // document.getElementById("button_fit").addEventListener("click", handleFit);
-        document.getElementById("nodeInput").addEventListener("change", changeNodeSize);
-        let linearGradient = 'linear-gradient( to right, rgb(' + COLOR_RANGE[0].join() + "), rgb(" + COLOR_RANGE[1].join() + ") 100%)";
-        log(linearGradient);
-        document.getElementsByClassName("gradient_color")[0].style.background = linearGradient;
+        // document.getElementById("nodeDialog").addEventListener("change", changeNodeSize);
+        // let linearGradient = 'linear-gradient( to right, rgb(' + COLOR_RANGE[0].join() + "), rgb(" + COLOR_RANGE[1].join() + ") 100%)";
+        // log(linearGradient);
+        // document.getElementsByClassName("gradient_color")[0].style.background = linearGradient;
         cyMousedownEvent();
         cyMouseupEvent();
         cyMouseDoubleClick();
-        cy.fit();
-
-        log(getColorBySize(0));
-        log(getColorBySize(50));
-        log(getColorBySize(100));
-
     }
 
 

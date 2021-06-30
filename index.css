@@ -1,32 +1,100 @@
 html, body {
     position: relative;
+    background-color: rgb(230, 230, 230);
 }
 
-#cy {
-    display: block;
-    padding-top: 100px;
-    height: 800px;
+.mainContainer {
+    position: relative;
+    display: flex;
+    flex-direction: row;
+    height: 100%;
+    padding: 100px 20px;
     width: 100%;
 }
 
-#nodeInput {
-    position: absolute;
-    color: black;
-    z-index: 10;
-    font-size: 12px;
-    font-weight: bold;
-    width: 60px;
-    height: 30px;
-    background-color: transparent;
-    border-color: transparent;
-    text-align: center;
+#cy {
+    flex: 3;
+    height: 750px;
+    width: 100%;
+    background-color: white;
+    border: whitesmoke solid 1px;
+    border-radius: 5px;
 }
 
-#nodeInput::placeholder {
-    color: darkgray;
-    font-weight: 500;
-    opacity: 1;
+.attributesContainer {
+    flex: 1;
+    height: 750px;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: space-between;
 }
+
+.attributesContainer .secondContainer {
+    width: 80%;
+    height: 300px;
+    background-color: white;
+    border: whitesmoke solid 1px;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: space-around;
+    border-radius: 5px;
+}
+
+.riskContainer {
+    display: flex;
+    flex-direction: column;
+}
+
+.attributesContainer h1 {
+    font-size: 20px;
+    font-weight: 500;
+    color: blue;
+    line-height: 1.8;
+}
+
+.linearBorder {
+    width: 90%;
+    padding: 5%;
+    height: 60%;
+    background-color: yellowgreen;
+    position: relative;
+    border: 1px solid transparent;
+}
+
+.nodeInfoContainer {
+    height: 85%;
+    width: 90%;
+    padding: 5%;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: space-around;
+}
+
+.nodeInfoContainer div {
+    width: 100%;
+    padding: 5%;
+    display: flex;
+    flex-direction: row;
+    align-items: center;
+    justify-content: space-between;
+    border-bottom: lightgray solid 0.5px;
+}
+
+/* #nodeInput {
+    position: absolute;
+    z-index: 100;
+    font-size: 12px;
+    font-weight: bold;
+    top: 30%;
+    left: 24%;
+    width: 30%;
+    height: 30%;
+    background-color: rgba(233,233,233,0.4);
+    text-align: center;
+} */
 
 #size_scalar {
     position: absolute;
