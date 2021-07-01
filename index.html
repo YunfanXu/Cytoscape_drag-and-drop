@@ -14,6 +14,9 @@
     <script src="https://unpkg.com/dagre@0.7.4/dist/dagre.js"></script>
     <script src="cytoscape-dagre.js"></script>
     <script src="https://ajax.googleapis.com/ajax/libs/jquery/2.1.3/jquery.min.js"></script>
+
+    <script src="https://cdn.jsdelivr.net/npm/echarts@5.1.2/dist/echarts.min.js"></script>
+
     <link rel="stylesheet" href="index.css" />
 </head>
 
@@ -28,7 +31,7 @@
         <div class="attributesContainer">
             <div class="secondContainer riskContainer">
                 <h1>System Risk</h1>
-                <div class="linearBorder"></div>
+                <div id="gaugeContainer" class="linearBorder"></div>
             </div>
             <div class="secondContainer infoContainer">
                 <h1 id="node_name">indicator</h1>
@@ -574,10 +577,72 @@
         valueUnkownSensitivity.innerHTML = UnkownSensitivity;
     }
 
+    function displayGaugeChart() {
+        var chartDom = document.getElementById('gaugeContainer');
+        var myChart = echarts.init(chartDom);
+        var option = {
+            series: [{
+                type: 'gauge',
+                min: 0,
+                max: 1,
+                splitNumber: 10,
+                axisLine: {
+                    lineStyle: {
+                        width: 10,
+                        color: [
+                            [0.3, '#67e0e3'],
+                            [0.7, '#37a2da'],
+                            [1, '#fd666d']
+                        ]
+                    }
+                },
+                pointer: {
+                    itemStyle: {
+                        color: 'auto'
+                    }
+                },
+                axisTick: {
+                    distance: -10,
+                    length: 4,
+                    lineStyle: {
+                        color: '#fff',
+                        width: 2
+                    }
+                },
+                splitLine: {
+                    distance: -10,
+                    length: 15,
+                    lineStyle: {
+                        color: '#fff',
+                        width: 2
+                    }
+                },
+                axisLabel: {
+                    color: 'auto',
+                    distance: -25,
+                    fontSize: 12
+                },
+                detail: {
+                    valueAnimation: true,
+                    formatter: '{value}',
+                    color: 'auto'
+                },
+                data: [{
+                    value: 0.1
+                }]
+            }]
+        };
+
+        option.series[0].data[0].value = (Math.random()).toFixed(2) - 0;
+        myChart.setOption(option, true);
+    }
+
     function main() {
         initCytoscape();
         initEdgeHandles();
         initInfoItems();
+
+        displayGaugeChart();
         // AddRandomNodeAndEdge(10);
         window.setTimeout(initExampleNode, 50);
         // document.getElementById("center_node").addEventListener("change", updateCenterNode);
