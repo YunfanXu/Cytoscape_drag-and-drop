@@ -31,7 +31,7 @@
                 <div class="linearBorder"></div>
             </div>
             <div class="secondContainer infoContainer">
-                <h1 id="node_id">indicator</h1>
+                <h1 id="node_name">indicator</h1>
                 <div class="nodeInfoContainer">
                     <div class="nodeRisk">
                         <span>Risk <br /> (Known)</span>
@@ -51,7 +51,7 @@
 
         <dialog id="nodeDialog">
             <form method="dialog">
-                <p><label>Name: <input type="text" id="node_name"> </label></p>
+                <p><label>Name: <input type="text" id="dialog_node_name"> </label></p>
                 <p><label>Risk: <input type="number" id="node_risk" step="0.001" max="1"> </label></p>
 
                 <p><label>Type:
@@ -94,8 +94,8 @@
     const EDGE_MAP = new Map();
     const { log } = console;
     var collection, currNode;
-    var node_id, valueRisk, valueKnownSensitivity, valueUnkownSensitivity;
-
+    var node_name, valueRisk, valueKnownSensitivity, valueUnkownSensitivity;
+    var nodeDialog, dialog_node_name, nodeRisk, nodeType, confirmBtn;
     function initExampleNode() {
         for (let i = 1; i < 4; i++) {
             createNewShapeNode(i, -100, i * 100);
@@ -153,7 +153,6 @@
     }
 
     function getNodeType(value) {
-        log("-----------",value);
         switch (value.tags[0]) {
             case "indicator":
                 return 0;
@@ -407,16 +406,10 @@
 
     function showDialog(shapeNode, { x, y }) {
         currNode = shapeNode;
-        log("currNode", currNode.id())
-        let nodeDialog = document.getElementById("nodeDialog");
-        let nodeName = document.getElementById("node_name");
-        let nodeRisk = document.getElementById("node_risk");
-        let nodeType = document.getElementById("node_type");
-
-        let confirmBtn = document.getElementById('confirmBtn');
         if (typeof nodeDialog.showModal === "function") {
-            nodeName.value = shapeNode.data("name");
-            nodeRisk.value = shapeNode.data("risk");
+            log("========", currNode.data("name"))
+            dialog_node_name.value = currNode.data("name");
+            nodeRisk.value = currNode.data("risk");
             nodeDialog.showModal();
         } else {
             alert("The <dialog> API is not supported by this browser");
@@ -424,16 +417,17 @@
 
         confirmBtn.addEventListener('click', () => {
             let data = {
-                id: nodeName.value,
-                name: nodeName.value,
+                name: dialog_node_name.value,
                 tags: [nodeType.value],
                 risk: nodeRisk.value
             }
             data.typeID = getNodeType(data);
-            shapeNode.data(data);
-            shapeNode.style("content", nodeName.value);
-            log("data.typeID",data.typeID);
-            shapeNode.style("shape", SHAPE_SET[data.typeID]);
+            currNode.data(data);
+            currNode.style("content", dialog_node_name.value);
+            currNode.style("shape", SHAPE_SET[data.typeID]);
+
+            node_name.value = data.name;
+            valueRisk.value = data.risk;
         });
 
     };
@@ -561,15 +555,20 @@
     }
 
     function initInfoItems() {
-        node_id = document.getElementById("node_id");
+        node_name = document.getElementById("node_name");
         valueRisk = document.getElementById("valueRisk");
         valueKnownSensitivity = document.getElementById("valueKnownSensitivity");
         valueUnkownSensitivity = document.getElementById("valueUnkownSensitivity");
 
+        nodeDialog = document.getElementById("nodeDialog");
+        dialog_node_name = document.getElementById("dialog_node_name");
+        nodeRisk = document.getElementById("node_risk");
+        nodeType = document.getElementById("node_type");
+        confirmBtn = document.getElementById('confirmBtn');
     }
 
     function changeNodeInfo(name = "", risk = 0, KnownSensitivity = 0, UnkownSensitivity = 0) {
-        node_id.innerHTML = name;
+        node_name.innerHTML = name;
         valueRisk.innerHTML = risk;
         valueKnownSensitivity.innerHTML = KnownSensitivity;
         valueUnkownSensitivity.innerHTML = UnkownSensitivity;
