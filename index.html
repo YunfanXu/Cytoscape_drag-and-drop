@@ -3,7 +3,7 @@
 <html>
 
 <head>
-    <title>Tutorial 1: Getting Started</title>
+    <title>DEMO</title>
     <!-- <script src="cytoscape.js" /> -->
     <script src="https://cdnjs.cloudflare.com/ajax/libs/cytoscape/3.19.0/cytoscape.min.js"
         integrity="sha512-TOWs340KHbJjY/a2SCtsUcXYBg7/xPX72NKpJ3VITogkHJTy2yMyoJE0pxJjumMGHCg46ud89KO5q1Toe3Aeaw=="
@@ -17,16 +17,22 @@
 
     <script src="https://cdn.jsdelivr.net/npm/echarts@5.1.2/dist/echarts.min.js"></script>
 
+    <link href="cytoscape-context-menus.css" rel="stylesheet" type="text/css" />
+    <script src="cytoscape-context-menus.js"></script>
+
+
     <link rel="stylesheet" href="index.css" />
 </head>
 
 <body>
 
     <div class="mainContainer">
-        <!-- <div class="controlContainer">
-        <input type="text" name="center" id="center_node" placeholder="Please enter the node you want to CENTER">
-        <button id="button_fit">Fit</button>
-    </div> -->
+        <div class="controlContainer">
+            <!-- <input type="text" name="center" id="center_node" placeholder="Please enter the node you want to CENTER"> -->
+            <!-- <button id="button_fit">Fit</button> -->
+            <button id="save_json">Export JSON File</button>
+
+        </div>
         <div id="cy"></div>
         <div class="attributesContainer">
             <div class="secondContainer riskContainer">
@@ -56,8 +62,17 @@
             <form method="dialog">
                 <p><label>Name: <input type="text" id="dialog_node_name"> </label></p>
                 <p><label>Risk: <input type="number" id="node_risk" step="0.001" max="1"> </label></p>
+                <p id="showLogical">
+                    <label>Logical Function:
+                        <select id="node_logic">
+                            <option>and</option>
+                            <option>or</option>
+                        </select>
+                    </label>
+                </p>
 
-                <p><label>Type:
+                <p>
+                    <label>Type:
                         <select id="node_type">
                             <option>component</option>
                             <option>supplier</option>
@@ -86,7 +101,7 @@
 
 </body>
 <script type="text/javascript">
-    var cy, eh, nIntervId, currentId = 0;
+    var cy, eh, nIntervId, currentId = 0, contextMenu;
     var shapeIDList = [0, 0, 0, 0];
     const WIDTH = window.innerWidth, HEIGHT = window.innerHeight;
     const COLOR_PALETTES = ["yellow", "gray", "gray", "gray"];
@@ -98,7 +113,7 @@
     const { log } = console;
     var collection, currNode;
     var node_name, valueRisk, valueKnownSensitivity, valueUnkownSensitivity;
-    var nodeDialog, dialog_node_name, nodeRisk, nodeType, confirmBtn;
+    var nodeDialog, dialog_node_name, nodeRisk, nodeType, showLogical, nodeLogic, confirmBtn;
     function initExampleNode() {
         for (let i = 1; i < 4; i++) {
             createNewShapeNode(i, -100, i * 100);
@@ -410,9 +425,15 @@
     function showDialog(shapeNode, { x, y }) {
         currNode = shapeNode;
         if (typeof nodeDialog.showModal === "function") {
-            log("========", currNode.data("name"))
             dialog_node_name.value = currNode.data("name");
             nodeRisk.value = currNode.data("risk");
+            if (currNode.data("logic")) {
+                log(currNode.data("logic"), currNode.data("logic"))
+                showLogical.hidden = false;
+                nodeLogic.value = currNode.data("logic")?.component;
+            } else {
+                showLogical.hidden = true;
+            }
             nodeDialog.showModal();
         } else {
             alert("The <dialog> API is not supported by this browser");
@@ -565,8 +586,12 @@
 
         nodeDialog = document.getElementById("nodeDialog");
         dialog_node_name = document.getElementById("dialog_node_name");
+        showLogical = document.getElementById("showLogical");
+
         nodeRisk = document.getElementById("node_risk");
         nodeType = document.getElementById("node_type");
+        nodeLogic = document.getElementById("node_logic");
+
         confirmBtn = document.getElementById('confirmBtn');
     }
 
@@ -625,6 +650,7 @@
                 detail: {
                     valueAnimation: true,
                     formatter: '{value}',
+                    fontSize: 25,
                     color: 'auto'
                 },
                 data: [{
@@ -637,10 +663,103 @@
         myChart.setOption(option, true);
     }
 
+    function initContextMenus() {
+        var options = {
+            evtType: 'cxttap',
+            menuItems: [
+                {
+                    id: 'remove', // ID of menu item
+                    content: 'remove', // Display content of menu item
+                    tooltipText: 'remove', // Tooltip text for menu item
+                    image: { src: "assets/remove.svg", width: 12, height: 12, x: 6, y: 4 }, // menu icon
+                    // Filters the elements to have this menu item on cxttap
+                    // If the selector is not truthy no elements will have this menu item on cxttap
+                    selector: 'node, edge',
+                    onClickFunction: function (event) { // The function to be executed on click
+                        var target = event.target || event.cyTarget;
+                        removed = target.remove();
+                        log(cy.elements())
+                        contextMenu.showMenuItem('undo-last-remove');
+                    },
+                    disabled: false, // Whether the item will be created as disabled
+                    show: true, // Whether the item will be shown or not
+                    hasTrailingDivider: false, // Whether the item will have a trailing divider
+                    coreAsWell: false, // Whether core instance have this item on cxttap
+                    // submenu: [] // Shows the listed menuItems as a submenu for this item. An item must have either submenu or onClickFunction or both.
+                },
+                {
+                    id: 'undo-last-remove',
+                    content: 'undo last remove',
+                    selector: 'node, edge',
+                    show: false,
+                    coreAsWell: true,
+                    onClickFunction: function (event) {
+                        if (removed) {
+                            removed.restore();
+                        }
+                        contextMenu.hideMenuItem('undo-last-remove');
+                    },
+                    hasTrailingDivider: true
+                },
+                {
+                    id: 'hide',
+                    content: 'hide',
+                    tooltipText: 'hide',
+                    selector: 'node, edge',
+                    onClickFunction: function () {
+                        console.log('hide element');
+                    },
+                    show: false, // Whether the item will be shown or not
+                },
+                {
+                    id: 'add-node',
+                    content: 'add node',
+                    tooltipText: 'add node',
+                    image: { src: "assets/add.svg", width: 12, height: 12, x: 6, y: 4 },
+                    selector: 'node',
+                    coreAsWell: true,
+                    show: false, // Whether the item will be shown or not
+                    onClickFunction: function () {
+                        console.log('add node');
+                    }
+                }
+            ],
+            // css classes that menu items will have
+            menuItemClasses: [
+                // add class names to this list
+            ],
+            // css classes that context menu will have
+            contextMenuClasses: [
+                // add class names to this list
+            ],
+            // Indicates that the menu item has a submenu. If not provided default one will be used
+            submenuIndicator: { src: 'assets/submenu-indicator-default.svg', width: 12, height: 12 }
+        };
+        contextMenu = cy.contextMenus(options);
+    }
+
+    function initButtons() {
+        let saveJSON = document.getElementById("save_json");
+        saveJSON.addEventListener("click", () => {
+            const jsonContext = JSON.stringify(cy.elements().jsons());
+            const fileName = "updatedJSON.json";
+            const type = "text/plain";
+            const file = new Blob([jsonContext], {type});
+            const a = document.createElement("a");
+            a.href = URL.createObjectURL(file);
+            a.download = fileName;
+            document.body.appendChild(a);
+            a.click();
+            a.remove();
+        })
+    }
+
     function main() {
         initCytoscape();
         initEdgeHandles();
         initInfoItems();
+        initContextMenus();
+        initButtons();
 
         displayGaugeChart();
         // AddRandomNodeAndEdge(10);

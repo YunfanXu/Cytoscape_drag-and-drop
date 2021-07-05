@@ -1,6 +1,6 @@
 html, body {
     position: relative;
-    background-color: rgb(230, 230, 230);
+    background-color: rgb(250, 250, 250);
 }
 
 .mainContainer {
@@ -146,10 +146,11 @@ input:focus, textarea:focus, select:focus {
 }
 
 .controlContainer button {
+    margin-top: 20px;
     padding: 10px;
     background-color: rbga(0, 0, 0, 0.2);
     height: 40px;
-    width: 100px;
+    width: 150px;
     border-color: azure;
     border-radius: 5px;
 }
